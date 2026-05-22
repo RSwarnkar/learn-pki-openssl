@@ -30,7 +30,7 @@ jobs:
           openssl req -x509 -sha256 -days 365 \
             -key ./Private-Key/private-key.pem \
             -out ./Public-Key/root-ca.pub \
-            -config ./Public-Key/fabrikam.com.conf
+            -config ./Public-Key/litware-root-ca.conf
         working-directory: ./05-cert-sign-cicd/ECC/Litware-Root-CA/
       - name: Check Root CA Public Key 
         run: cat root-ca.pub
