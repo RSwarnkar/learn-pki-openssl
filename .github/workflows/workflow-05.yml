@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  job-01:
+  csr-ecc:
     runs-on: ubuntu-latest
 
     steps:
@@ -19,3 +19,15 @@ jobs:
 
       - name: Openssl Version 
         run: openssl version
+      - name: Generate Root CA Private Key 
+        run: openssl ecparam -genkey -name prime256v1 -out private-key.pem -noout
+        working-directory: ./05-cert-sign-cicd/ECC/Litware-Root-CA/Private-Key
+      - name: Check Root CA Private Key 
+        run: cat private-key.pem
+        working-directory: ./05-cert-sign-cicd/ECC/Litware-Root-CA/Private-Key
+      - name: Generate Public Key
+        run: openssl rsa -in private-key.pem -pubout -out ../Public-Key/public-key.pub
+        working-directory: ./05-cert-sign-cicd/ECC/Litware-Root-CA/Private-Key
+
+
+        
