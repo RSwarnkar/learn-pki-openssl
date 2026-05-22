@@ -19,23 +19,43 @@ jobs:
 
       - name: Openssl Version 
         run: openssl version
-      - name: Generate Root CA Private Key 
+      
+      - name: Root CA - Generate Private Key 
         run: openssl ecparam -genkey -name prime256v1 -out private-key.pem -noout
         working-directory: ./05-cert-sign-cicd/ECC/Litware-Root-CA/Private-Key
-      - name: Check Root CA Private Key 
+      
+      - name: Root CA - Check Private Key 
         run: cat private-key.pem
         working-directory: ./05-cert-sign-cicd/ECC/Litware-Root-CA/Private-Key
-      - name: Generate Root Certificate using conf
+      
+      - name: Root CA - Generate Pub Cert using conf
         run: | 
           openssl req -x509 -sha256 -days 365 \
             -key ./Private-Key/private-key.pem \
             -out ./Public-Key/root-ca.pub \
             -config ./Public-Key/litware-root-ca.conf
         working-directory: ./05-cert-sign-cicd/ECC/Litware-Root-CA/
-      - name: Check Root CA Public Key 
+      
+      - name: Root CA - Check Pub Cert
         run: cat root-ca.pub
         working-directory: ./05-cert-sign-cicd/ECC/Litware-Root-CA/Public-Key
 
+      - name: Chain-1 CA - Generate Private Key
+        run: openssl ecparam -genkey -name prime256v1 -out private-key.pem -noout
+        working-directory: ./05-cert-sign-cicd/ECC/Litware-Sales-CA/Private-Key
+
+      - name: Chain-1 CA - Generate Generate CSR
+        run: |
+          openssl req \
+          -key ./Private-Key/private-key.pem \
+          -out ./CSR/litware-sales-ca.csr.pem \
+          -config ./Public-Key/litware-sales-ca.conf
+        working-directory: ./05-cert-sign-cicd/ECC/Litware-Sales-CA/
+
+      - name: Chain-1 CA - Inspect CSR
+        run: |
+          openssl req -in ./CSR/litware-sales-ca.csr.pem -text
+        working-directory: ./05-cert-sign-cicd/ECC/Litware-Sales-CA/
 
 
 
