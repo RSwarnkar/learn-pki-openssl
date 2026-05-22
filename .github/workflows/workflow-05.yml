@@ -18,6 +18,4 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Openssl Version 
-        run: |
-          echo "Openssl Version check: "
-          openssl --version
+        run: openssl version
