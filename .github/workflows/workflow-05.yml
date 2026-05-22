@@ -1,0 +1,23 @@
+name: Workflow-05 CSR Automated
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "05-cert-sign-cicd/**"
+      - ".github/workflows/workflow-05.yml"
+  workflow_dispatch:
+
+jobs:
+  job-01:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Openssl Version 
+        run: |
+          echo "Openssl Version check: "
+          openssl --version

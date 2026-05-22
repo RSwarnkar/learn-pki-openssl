@@ -264,6 +264,16 @@ This proves that the certificate was signed by the internal Root CA.
 
 ---
 
+# Verify the Signed Certifcate:
+
+```bash
+ openssl verify -CAfile ca-root-cert.rsa.pem intermediate-cert.rsa.pem
+```
+
+
+
+---
+
 # Export Certificate to DER Format
 
 Windows can easily display certificate details from `.der` files.
