@@ -1,64 +1,136 @@
+# CSR with Internal Certificate Authorities
 
-# CSR with internal Certificate Authorities:
+`fabrikam.com` is a company with its own internal Root Certificate Authority (Root CA).
+There is a Sales department which wants to host a sub-domain HTTPS application:
 
-fabrikam.com is company with a root CA. There is sales deplartment which wants to host sub-domain with HTTPS app. They want to sign a certificate with internal root CA. 
-
-
-## Assumption: Farikam Root CA has private key setup already
-
-If not use below to generate Root CA Private and public Key:
-
-openssl genrsa -out private-key-root.ca.fabrikam.com-rsa-4096.pem 4096 
-# OR 
-openssl ecparam -genkey -name prime256v1 -out private-key-root.ca.fabrikam.com-ecc-prime256v1.pem -noout
-
-
-
-
-openssl rsa -pubout -in private-key-root.ca.fabrikam.com-rsa-4096.pem -out public-key-root.ca.fabrikam.com-rsa-4096.pem
-
-
-Output Public Key of Root CA: 
-
-openssl rsa -pubout -in private-key-root.ca.fabrikam.com-rsa-4096.pem -out public-key-root.ca.fabrikam.com-rsa-4096.pem
-
-# OR 
-openssl ec -pubout -in private-key-root.ca.fabrikam.com-ecc-prime256v1.pem -out public-key-root.ca.fabrikam.com-ecc-prime256v1.pem
-
-
-
-
-
-# CSR from Fabrikam Sales Team: 
-
-
-First create a private key at intermediate CA side: 
-
-
-openssl genrsa -out private-key-sales.fabrikam.com-rsa-4096.pem 4096 
-# OR 
-openssl ecparam -genkey -name prime256v1 -out private-key-sales.fabrikam.com-ecc-prime256v1.pem -noout
-
-
-
-Then generate the CSR request: using `openssl req` command
-
-openssl req -key private-key-sales.fabrikam.com-rsa-4096.pem -new -out csr-rsa.pem -config sales.fabrikam.com.conf
-
-openssl req -key private-key-sales.fabrikam.com-ecc-prime256v1.pem -new -out csr-ecc.pem -config sales.fabrikam.com.conf
-
-
-Next, go to website https://certlogik.com/decoder and inspect csr-ecc.pem or csr-rsa.pem
-
-or check using `openssl req`
-
-openssl req -in csr-ecc.pem -text 
-openssl req -in csr-rsa.pem -text 
-
-
-Notice the output below. 
-
+```text
+https://sales.fabrikam.com
 ```
+
+They want the certificate to be signed by the internal Root CA instead of a public CA like GoDaddy or DigiCert.
+
+---
+
+# Assumption: Fabrikam Root CA Already Has Private Key Setup
+
+If not, use the commands below to generate the Root CA private key.
+
+## Generate Root CA Private Key
+
+### RSA
+
+```bash
+openssl genrsa -out private-key-root.ca.fabrikam.com-rsa-4096.pem 4096
+```
+
+### ECC
+
+```bash
+openssl ecparam -genkey -name prime256v1 -out private-key-root.ca.fabrikam.com-ecc-prime256v1.pem -noout
+```
+
+---
+
+# Create Root CA X509 Certificate
+
+## RSA Root Certificate
+
+```bash
+openssl req -x509 -sha256 -days 365 \
+-key private-key-root.ca.fabrikam.com-rsa-4096.pem \
+-out ca-root-cert.rsa.pem \
+-config fabrikam.com.conf
+```
+
+## ECC Root Certificate
+
+```bash
+openssl req -x509 -sha256 -days 365 \
+-key private-key-root.ca.fabrikam.com-ecc-prime256v1.pem \
+-out ca-root-cert.ecc.pem \
+-config fabrikam.com.conf
+```
+
+---
+
+# CSR Request Generation from Fabrikam Sales Team
+
+The Sales department first generates its own private key.
+
+---
+
+# Step 1: Create Private Key at Sales Department Side
+
+## RSA
+
+```bash
+openssl genrsa -out private-key-sales.fabrikam.com-rsa-4096.pem 4096
+```
+
+## ECC
+
+```bash
+openssl ecparam -genkey -name prime256v1 \
+-out private-key-sales.fabrikam.com-ecc-prime256v1.pem \
+-noout
+```
+
+---
+
+# Step 2: Generate CSR Request
+
+Generate the CSR using the `openssl req` command.
+
+## RSA CSR
+
+```bash
+openssl req \
+-key private-key-sales.fabrikam.com-rsa-4096.pem \
+-new \
+-out csr-rsa.pem \
+-config sales.fabrikam.com.conf
+```
+
+## ECC CSR
+
+```bash
+openssl req \
+-key private-key-sales.fabrikam.com-ecc-prime256v1.pem \
+-new \
+-out csr-ecc.pem \
+-config sales.fabrikam.com.conf
+```
+
+---
+
+# Step 3: Inspect the CSR
+
+You can inspect the CSR using:
+
+## Online Decoder
+
+[CertLogik CSR Decoder](https://certlogik.com/decoder?utm_source=chatgpt.com)
+
+Upload:
+
+* `csr-rsa.pem`
+* `csr-ecc.pem`
+
+---
+
+## Inspect Using OpenSSL
+
+```bash
+openssl req -in csr-ecc.pem -text
+
+openssl req -in csr-rsa.pem -text
+```
+
+---
+
+# Example CSR Output
+
+```text
 -----BEGIN CERTIFICATE REQUEST-----
 MIIBWTCB/wIBADCBnDELMAkGA1UEBhMCSU4xFDASBgNVBAgMC01haGFyYXNodHJh
 MQ4wDAYDVQQHDAVUaGFuZTEnMCUGA1UECgweU2FsZXMgRGVwYXJ0bWVudCwgRmFi
@@ -70,18 +142,170 @@ y/NR+/k6REXX/beOeynb6JxqqH64uAEfweACIQC0nXgvqWwXjbr3yc5ELS39iG2r
 SoJFwl+yaEXYToK8ZA==
 -----END CERTIFICATE REQUEST-----
 ```
-This is the exact stuff we need to send to Root CA for CSR signing.
-The sales department can zip this with some secret to prevent any modification. 
 
+This is the exact content that needs to be sent to the Root CA for signing.
 
-## At Root CA Side:
+The Sales department can:
 
-Root CA will first check the CSR file. and the content of the CSR using `openssl req`. 
+* ZIP the CSR file
+* Protect it with a password
+* Send it securely to the Root CA administrators
 
+This prevents accidental modification during transfer.
+
+---
+
+# At Root CA Side
+
+The Root CA administrators first inspect the CSR contents.
+
+## Validate CSR
+
+```bash
+openssl req -in csr-ecc.pem -text
+
+openssl req -in csr-rsa.pem -text
 ```
-openssl req -in csr-ecc.pem -text 
-openssl req -in csr-rsa.pem -text 
+
+They verify:
+
+* Subject details
+* Common Name (CN)
+* Organization
+* Email
+* Public key
+* Requested attributes
+
+---
+
+# Root CA Signs the CSR
+
+The Root CA uses:
+
+* Its own private key
+* Its Root CA certificate
+
+to generate a signed certificate.
+
+---
+
+# RSA Signing
+
+```bash
+openssl x509 -req \
+-CA ca-root-cert.rsa.pem \
+-CAkey private-key-root.ca.fabrikam.com-rsa-4096.pem \
+-in "../CSR-Workbench/csr-rsa.pem" \
+-out intermediate-cert.rsa.pem \
+-days 365
 ```
 
-And then they will generate signed certificate using their private key and sned back the signed certificate 
+---
 
+# ECC Signing
+
+```bash
+openssl x509 -req \
+-CA ca-root-cert.ecc.pem \
+-CAkey private-key-root.ca.fabrikam.com-ecc-prime256v1.pem \
+-in "../CSR-Workbench/csr-ecc.pem" \
+-out intermediate-cert.ecc.pem \
+-days 365
+```
+
+---
+
+# Root CA Sends Back the Signed Certificate
+
+The signed certificate files returned are:
+
+```text
+intermediate-cert.rsa.pem
+```
+
+or
+
+```text
+intermediate-cert.ecc.pem
+```
+
+---
+
+# Inspect the Signed Certificate
+
+## ECC
+
+```bash
+openssl x509 -in intermediate-cert.ecc.pem -text -noout
+```
+
+## RSA
+
+```bash
+openssl x509 -in intermediate-cert.rsa.pem -text -noout
+```
+
+---
+
+# Notice the Issuer and Subject
+
+```text
+Issuer: C=IN, ST=Maharashtra, L=Mumbai, O=Fabrikam Org, CN=fabrikam.com, emailAddress=rootca@fabrikam.com
+
+Subject: C=IN, ST=Maharashtra, L=Thane, O=Sales Department, Fabrikam Org, CN=sales.fabrikam.com, emailAddress=sales@fabrikam.com
+```
+
+## Important Observation
+
+* `Issuer` = Root CA
+* `Subject` = Sales Department Certificate
+
+This proves that the certificate was signed by the internal Root CA.
+
+---
+
+# Export Certificate to DER Format
+
+Windows can easily display certificate details from `.der` files.
+
+## RSA DER Export
+
+```bash
+openssl x509 -in intermediate-cert.rsa.pem \
+-out intermediate-cert.rsa.der \
+-outform DER
+```
+
+## ECC DER Export
+
+```bash
+openssl x509 -in intermediate-cert.ecc.pem \
+-out intermediate-cert.ecc.der \
+-outform DER
+```
+
+Now double-click the `.der` file in Windows to inspect the certificate using the Certificate Viewer.
+
+---
+
+# Final Flow Summary
+
+```text
+Sales Team
+   |
+   |---- Generate Private Key
+   |
+   |---- Generate CSR
+   |
+   |---- Send CSR to Root CA
+                |
+                |---- Root CA validates CSR
+                |
+                |---- Root CA signs CSR using Root Private Key
+                |
+                |---- Sends signed certificate back
+   |
+Sales Team receives signed certificate
+   |
+Deploy HTTPS Application
+```
