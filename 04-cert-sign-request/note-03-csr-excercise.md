@@ -4,6 +4,34 @@
 fabrikam.com is company with a root CA. There is sales deplartment which wants to host sub-domain with HTTPS app. They want to sign a certificate with internal root CA. 
 
 
+## Assumption: Farikam Root CA has private key setup already
+
+If not use below to generate Root CA Private and public Key:
+
+openssl genrsa -out private-key-root.ca.fabrikam.com-rsa-4096.pem 4096 
+# OR 
+openssl ecparam -genkey -name prime256v1 -out private-key-root.ca.fabrikam.com-ecc-prime256v1.pem -noout
+
+
+
+
+openssl rsa -pubout -in private-key-root.ca.fabrikam.com-rsa-4096.pem -out public-key-root.ca.fabrikam.com-rsa-4096.pem
+
+
+Output Public Key of Root CA: 
+
+openssl rsa -pubout -in private-key-root.ca.fabrikam.com-rsa-4096.pem -out public-key-root.ca.fabrikam.com-rsa-4096.pem
+
+# OR 
+openssl ec -pubout -in private-key-root.ca.fabrikam.com-ecc-prime256v1.pem -out public-key-root.ca.fabrikam.com-ecc-prime256v1.pem
+
+
+
+
+
+# CSR from Fabrikam Sales Team: 
+
+
 First create a private key at intermediate CA side: 
 
 
