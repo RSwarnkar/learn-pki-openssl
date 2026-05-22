@@ -31,7 +31,8 @@ Email Address []:admin@litwareapi.com
 # View Certificate using Openssl :
 
 ```bash
-$ openssl x509 -in ecc-cert.pem -text -noout
+openssl x509 -in ecc-cert.pem -text -noout
+
 Certificate:
     Data:
         Version: 3 (0x2)
