@@ -25,9 +25,18 @@ jobs:
       - name: Check Root CA Private Key 
         run: cat private-key.pem
         working-directory: ./05-cert-sign-cicd/ECC/Litware-Root-CA/Private-Key
-      - name: Generate Public Key
-        run: openssl rsa -in private-key.pem -pubout -out ../Public-Key/public-key.pub
-        working-directory: ./05-cert-sign-cicd/ECC/Litware-Root-CA/Private-Key
+      - name: Generate Root Certificate using conf
+        run: openssl req -x509 -sha256 -days 365 \
+            -key Private-Key/private-key.pem \
+            -out Public-Key/root-ca.pub \
+            -config Public-Key/fabrikam.com.conf
+        working-directory: ./05-cert-sign-cicd/ECC/Litware-Root-CA/
+      - name: Check Root CA Public Key 
+        run: cat root-ca.pub
+        working-directory: ./05-cert-sign-cicd/ECC/Litware-Root-CA/Public-Key
 
 
-        
+
+
+
+
