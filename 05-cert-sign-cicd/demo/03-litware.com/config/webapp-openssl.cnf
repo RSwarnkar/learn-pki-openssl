@@ -1,0 +1,23 @@
+[ req ]
+default_bits = 2048
+prompt = no
+distinguished_name = dn
+req_extensions = v3_req
+
+[ dn ]
+C = IN
+ST = Maharashtra
+L = Thane
+O = Litware
+OU = Web Applications
+CN = webapp.litware.com
+
+[ v3_req ]
+subjectAltName = @alt_names
+basicConstraints = critical, CA:false
+keyUsage = critical, digitalSignature, keyEncipherment
+extendedKeyUsage = serverAuth
+
+[ alt_names ]
+DNS.1 = webapp.litware.com
+DNS.2 = www.webapp.litware.com
