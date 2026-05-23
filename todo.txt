@@ -1,5 +1,48 @@
  
 
+
+ECC:
+  Awesome-Cert:
+    Private-Key:
+	  private-key.pem	  
+    Public-Key:
+	  litware-root-ca.conf
+	  root-ca.pub
+	CSR:
+	  litware-sales-ca.pem
+  
+  Litware-Sales-CA:
+    Private-Key:
+	  private-key.pem	  
+    Public-Key:
+	  root-ca.pub
+	  litware-sales-ca.conf
+	CSR:
+	  litware-sales-subteam-ca.pem
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 RSA: 
   Litware-Root-CA:
     Private-Key:
