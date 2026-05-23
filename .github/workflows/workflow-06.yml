@@ -1,0 +1,290 @@
+name: PKI Certificate Chain Demo
+
+on:
+  workflow_dispatch:
+
+jobs:
+
+  generate-pki-chain:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      #######################################################################
+      # Install OpenSSL (already present on ubuntu-latest, but explicit)
+      #######################################################################
+
+      - name: Verify OpenSSL
+        run: openssl version
+
+      #######################################################################
+      # Create Folder Structure
+      #######################################################################
+
+      - name: Create PKI Folder Structure
+        run: |
+
+          mkdir -p learn-pki-demo
+
+          cd learn-pki-demo
+
+          mkdir -p 01-root.org/{private,certs,csr,config}
+          mkdir -p 02-peddler.io/{private,certs,csr,config}
+          mkdir -p 03-litware.com/{private,certs,csr,config}
+          mkdir -p chain
+
+      #######################################################################
+      # ROOT CA CONFIGURATION
+      #######################################################################
+
+      - name: Create Root CA OpenSSL Config
+        run: |
+
+          cat > learn-pki-demo/01-root.org/config/root-openssl.cnf << 'EOF'
+
+          [ req ]
+          default_bits = 4096
+          prompt = no
+          distinguished_name = dn
+          x509_extensions = v3_ca
+
+          [ dn ]
+          C = IN
+          ST = Maharashtra
+          L = Thane
+          O = root.org
+          OU = Root Certificate Authority
+          CN = root.org Root CA
+
+          [ v3_ca ]
+          subjectKeyIdentifier = hash
+          authorityKeyIdentifier = keyid:always,issuer
+          basicConstraints = critical, CA:true
+          keyUsage = critical, keyCertSign, cRLSign
+
+          EOF
+
+      #######################################################################
+      # GENERATE ROOT CA
+      #######################################################################
+
+      - name: Generate Root CA Private Key
+        run: |
+
+          openssl genrsa \
+          -out learn-pki-demo/01-root.org/private/root.org.key.pem \
+          4096
+
+      - name: Generate Root CA Certificate
+        run: |
+
+          openssl req \
+          -x509 \
+          -new \
+          -nodes \
+          -key learn-pki-demo/01-root.org/private/root.org.key.pem \
+          -sha256 \
+          -days 3650 \
+          -out learn-pki-demo/01-root.org/certs/root.org.cert.pem \
+          -config learn-pki-demo/01-root.org/config/root-openssl.cnf
+
+      #######################################################################
+      # INTERMEDIATE CA CONFIGURATION
+      #######################################################################
+
+      - name: Create Intermediate CA OpenSSL Config
+        run: |
+
+          cat > learn-pki-demo/02-peddler.io/config/peddler-openssl.cnf << 'EOF'
+
+          [ req ]
+          default_bits = 4096
+          prompt = no
+          distinguished_name = dn
+          req_extensions = v3_intermediate_ca
+
+          [ dn ]
+          C = IN
+          ST = Maharashtra
+          L = Thane
+          O = peddler.io
+          OU = Intermediate Certificate Authority
+          CN = peddler.io Intermediate CA
+
+          [ v3_intermediate_ca ]
+          subjectKeyIdentifier = hash
+          basicConstraints = critical, CA:true, pathlen:0
+          keyUsage = critical, keyCertSign, cRLSign
+
+          EOF
+
+      #######################################################################
+      # GENERATE INTERMEDIATE CA
+      #######################################################################
+
+      - name: Generate Intermediate CA Private Key
+        run: |
+
+          openssl genrsa \
+          -out learn-pki-demo/02-peddler.io/private/peddler.io.key.pem \
+          4096
+
+      - name: Generate Intermediate CA CSR
+        run: |
+
+          openssl req \
+          -new \
+          -key learn-pki-demo/02-peddler.io/private/peddler.io.key.pem \
+          -out learn-pki-demo/02-peddler.io/csr/peddler.io.csr.pem \
+          -config learn-pki-demo/02-peddler.io/config/peddler-openssl.cnf
+
+      - name: Generate Root CA Serial File
+        run: |
+
+          echo 1000 > learn-pki-demo/01-root.org/serial
+
+      - name: Root CA Signs Intermediate CA
+        run: |
+
+          openssl x509 \
+          -req \
+          -in learn-pki-demo/02-peddler.io/csr/peddler.io.csr.pem \
+          -CA learn-pki-demo/01-root.org/certs/root.org.cert.pem \
+          -CAkey learn-pki-demo/01-root.org/private/root.org.key.pem \
+          -CAserial learn-pki-demo/01-root.org/serial \
+          -out learn-pki-demo/02-peddler.io/certs/peddler.io.cert.pem \
+          -days 1825 \
+          -sha256 \
+          -extfile learn-pki-demo/02-peddler.io/config/peddler-openssl.cnf \
+          -extensions v3_intermediate_ca
+
+      #######################################################################
+      # WEB SERVER CONFIGURATION
+      #######################################################################
+
+      - name: Create Web Server OpenSSL Config
+        run: |
+
+          cat > learn-pki-demo/03-litware.com/config/webapp-openssl.cnf << 'EOF'
+
+          [ req ]
+          default_bits = 2048
+          prompt = no
+          distinguished_name = dn
+          req_extensions = v3_req
+
+          [ dn ]
+          C = IN
+          ST = Maharashtra
+          L = Thane
+          O = Litware
+          OU = Web Applications
+          CN = webapp.litware.com
+
+          [ v3_req ]
+          subjectAltName = @alt_names
+          basicConstraints = critical, CA:false
+          keyUsage = critical, digitalSignature, keyEncipherment
+          extendedKeyUsage = serverAuth
+
+          [ alt_names ]
+          DNS.1 = webapp.litware.com
+          DNS.2 = www.webapp.litware.com
+
+          EOF
+
+      #######################################################################
+      # GENERATE WEB SERVER CERTIFICATE
+      #######################################################################
+
+      - name: Generate Web Server Private Key
+        run: |
+
+          openssl genrsa \
+          -out learn-pki-demo/03-litware.com/private/webapp.litware.com.key.pem \
+          2048
+
+      - name: Generate Web Server CSR
+        run: |
+
+          openssl req \
+          -new \
+          -key learn-pki-demo/03-litware.com/private/webapp.litware.com.key.pem \
+          -out learn-pki-demo/03-litware.com/csr/webapp.litware.com.csr.pem \
+          -config learn-pki-demo/03-litware.com/config/webapp-openssl.cnf
+
+      - name: Generate Intermediate CA Serial File
+        run: |
+
+          echo 2000 > learn-pki-demo/02-peddler.io/serial
+
+      - name: Intermediate CA Signs Web Server Certificate
+        run: |
+
+          openssl x509 \
+          -req \
+          -in learn-pki-demo/03-litware.com/csr/webapp.litware.com.csr.pem \
+          -CA learn-pki-demo/02-peddler.io/certs/peddler.io.cert.pem \
+          -CAkey learn-pki-demo/02-peddler.io/private/peddler.io.key.pem \
+          -CAserial learn-pki-demo/02-peddler.io/serial \
+          -out learn-pki-demo/03-litware.com/certs/webapp.litware.com.cert.pem \
+          -days 825 \
+          -sha256 \
+          -extfile learn-pki-demo/03-litware.com/config/webapp-openssl.cnf \
+          -extensions v3_req
+
+      #######################################################################
+      # BUILD CERTIFICATE CHAIN
+      #######################################################################
+
+      - name: Build Full Certificate Chain
+        run: |
+
+          cat \
+          learn-pki-demo/03-litware.com/certs/webapp.litware.com.cert.pem \
+          learn-pki-demo/02-peddler.io/certs/peddler.io.cert.pem \
+          learn-pki-demo/01-root.org/certs/root.org.cert.pem \
+          > learn-pki-demo/chain/full-chain.pem
+
+      #######################################################################
+      # VERIFY CHAIN
+      #######################################################################
+
+      - name: Verify Intermediate Certificate
+        run: |
+
+          openssl verify \
+          -CAfile learn-pki-demo/01-root.org/certs/root.org.cert.pem \
+          learn-pki-demo/02-peddler.io/certs/peddler.io.cert.pem
+
+      - name: Verify Web Server Certificate
+        run: |
+
+          openssl verify \
+          -CAfile learn-pki-demo/01-root.org/certs/root.org.cert.pem \
+          -untrusted learn-pki-demo/02-peddler.io/certs/peddler.io.cert.pem \
+          learn-pki-demo/03-litware.com/certs/webapp.litware.com.cert.pem
+
+      #######################################################################
+      # EXPORT TRUST CHAIN ARTIFACTS
+      #######################################################################
+
+      - name: Prepare Artifact Package
+        run: |
+
+          mkdir -p artifacts
+
+          cp learn-pki-demo/chain/full-chain.pem artifacts/
+          cp learn-pki-demo/01-root.org/certs/root.org.cert.pem artifacts/
+          cp learn-pki-demo/02-peddler.io/certs/peddler.io.cert.pem artifacts/
+          cp learn-pki-demo/03-litware.com/certs/webapp.litware.com.cert.pem artifacts/
+
+      - name: Upload Certificate Chain Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pki-certificate-chain
+          path: artifacts/
